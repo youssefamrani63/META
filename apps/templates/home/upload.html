@@ -1,0 +1,92 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Upload {% endblock %}
+
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="content">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Upload Excel File</h4>
+                </div>
+                <div class="card-body">
+                    <h1>Upload and Impute</h1>
+                    <form method="POST" action="/upload" enctype="multipart/form-data">
+                        <input type="file" name="file" accept=".xls,.xlsx">
+                        <input type="submit" value="Upload">
+                    </form>
+                    {% if error %}
+                        <p class="error">{{ error }}</p>
+                    {% endif %}
+                    {% if tables %}
+                        {% for table in tables %}
+                            {{ table|safe }}
+                        {% endfor %}
+                        <button id="impute-btn" class="btn btn-primary" >Impute</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0"></script>
+<script>
+$(document).ready(function() {
+    // Ajoute un gestionnaire d'événements au clic sur le bouton "Impute"
+    $('#impute-btn').on('click', function() {
+        var tableData = [];
+
+        // Parcours chaque ligne du tableau de données
+        $('.data tbody tr').each(function() {
+            var rowData = {};
+
+            // Parcours chaque cellule de la ligne
+            $(this).find('td').each(function(index) {
+                var columnName = $('.data thead tr th').eq(index).text().trim();
+                var cellValue = $(this).text().trim();
+
+                // Ajoute la valeur de la cellule au dictionnaire rowData
+                rowData[columnName] = cellValue;
+            });
+
+            // Ajoute le dictionnaire rowData à la liste tableData
+            tableData.push(rowData);
+        });
+
+        // Envoie les données au serveur pour l'imputation
+        $.ajax({
+            url: '/impute',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(tableData),
+            success: function(response) {
+                // Met à jour le tableau avec les données imputées
+                var imputedData = response.data;
+                $('.data tbody').empty();
+                $.each(imputedData, function(index, row) {
+                    var tr = $('<tr>');
+                    $.each(row, function(key, value) {
+                        var td = $('<td>').text(value);
+                        tr.append(td);
+                    });
+                    $('.data tbody').append(tr);
+                });
+            },
+            error: function() {
+                alert('Une erreur s\'est produite lors de l\'imputation des données.');
+            }
+        });
+    });
+});
+</script>
+{% endblock content %}
+
+{% block javascripts %}{% endblock javascripts %}
+
+
+
